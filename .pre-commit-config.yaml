@@ -1,12 +1,17 @@
 repos:
 -   repo: git@github.com:pre-commit/pre-commit-hooks
-    rev: v2.5.0
+    rev: v3.0.1
     hooks:
     - id: debug-statements
     - id: trailing-whitespace
     - id: check-merge-conflict
     - id: check-ast
     - id: check-yaml
+
+
+- repo: https://gitlab.com/pycqa/flake8
+  rev: '3.8.1'
+  hooks:
     - id: flake8
       args: ['--exclude=docs/*,*/migrations/*', '--ignore=E501,W503,E203,E231']
 
