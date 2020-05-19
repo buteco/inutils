@@ -38,6 +38,7 @@ def test_format_mins():
     assert format_mins(72) == "1m12s"
     assert format_mins(3610) == "60m10s"
     assert format_mins(6031) == "100m31s"
+    assert format_mins(59.9) == "1m00s"
 
 
 def test_timer():

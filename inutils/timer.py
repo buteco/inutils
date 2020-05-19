@@ -98,5 +98,5 @@ def format_ms(seconds):
 
 
 def format_mins(seconds):
-    mins, secs = divmod(seconds, 60)
-    return "{}m{:02.0f}s".format(int(mins), secs)
+    mins, secs = divmod(round(seconds), 60)
+    return "{}m{:02.0f}s".format(mins, secs)
