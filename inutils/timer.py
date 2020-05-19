@@ -65,14 +65,16 @@ class Timer:
         return "<{}(label={!r}, parent={!r})>".format(type(self).__name__, self.label, parent)
 
     def print(self, *args):
-        curr = "[{}]\t".format(format_mins(time.perf_counter() - self.root.start_time))
+        now = format_mins(time.perf_counter() - self.root.start_time)
+        prefix = "[{}]".format(now)
+        prefix = "{:<10}".format(prefix)
         indent = "     " * self.level
 
         if not indent:
-            vals = (curr, *args)
+            vals = (prefix, *args)
         else:
             indent = indent[:-2] + "↳ "
-            vals = (curr, indent, *args)
+            vals = (prefix, indent, *args)
 
         output = " ".join(vals)
         # FIXME: make this to work properly with parent/child

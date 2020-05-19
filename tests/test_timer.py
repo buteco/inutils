@@ -1,6 +1,7 @@
 import functools
 import re
 import time
+from unittest import mock
 
 from inutils.timer import Timer, format_mins, format_ms, format_time
 
@@ -93,8 +94,8 @@ def test_timer_basic_usage():
     assert_equal_reports(
         timer.report,
         """
-        [0m00s]\t label start
-        [0m00s]\t label end (10ms)
+        [0m00s]    label start
+        [0m00s]    label end (10ms)
     """,
     )
 
@@ -123,8 +124,8 @@ def test_timer_child_one_level():
     assert_equal_reports(
         child.report,
         """
-        [0m00s]\t    ↳  child start
-        [0m00s]\t    ↳  child end (10ms)
+        [0m00s]       ↳  child start
+        [0m00s]       ↳  child end (10ms)
     """,
     )
 
@@ -132,10 +133,10 @@ def test_timer_child_one_level():
     assert_equal_reports(
         timer.report,
         """
-        [0m00s]\t parent start
-        [0m00s]\t    ↳  child start
-        [0m00s]\t    ↳  child end (10ms)
-        [0m00s]\t parent end (40ms)
+        [0m00s]    parent start
+        [0m00s]       ↳  child start
+        [0m00s]       ↳  child end (10ms)
+        [0m00s]    parent end (40ms)
     """,
     )
 
@@ -156,8 +157,8 @@ def test_timer_two_childs():
     assert_equal_reports(
         child1.report,
         """
-        [0m00s]\t    ↳  child1 start
-        [0m00s]\t    ↳  child1 end (200ms)
+        [0m00s]       ↳  child1 start
+        [0m00s]       ↳  child1 end (200ms)
     """,
     )
 
@@ -167,8 +168,8 @@ def test_timer_two_childs():
     assert_equal_reports(
         child2.report,
         """
-        [0m00s]\t    ↳  child2 start
-        [0m00s]\t    ↳  child2 end (100ms)
+        [0m00s]       ↳  child2 start
+        [0m00s]       ↳  child2 end (100ms)
     """,
     )
 
@@ -176,11 +177,27 @@ def test_timer_two_childs():
     assert_equal_reports(
         timer.report,
         """
-        [0m00s]\t parent start
-        [0m00s]\t    ↳  child1 start
-        [0m00s]\t    ↳  child1 end (200ms)
-        [0m00s]\t    ↳  child2 start
-        [0m00s]\t    ↳  child2 end (100ms)
-        [0m00s]\t parent end (400ms)
+        [0m00s]    parent start
+        [0m00s]       ↳  child1 start
+        [0m00s]       ↳  child1 end (200ms)
+        [0m00s]       ↳  child2 start
+        [0m00s]       ↳  child2 end (100ms)
+        [0m00s]    parent end (400ms)
     """,
+    )
+
+
+@mock.patch("inutils.timer.time.perf_counter")
+def test_report_total_time_more_than_six_chars(counter_mock):
+    counter_mock.side_effect = [0, 0, 612, 612]
+
+    with Timer("foo") as timer:
+        pass
+
+    assert_equal_reports(
+        timer.report,
+        """
+        [0m00s]    foo start
+        [10m12s]   foo end (10m12s)
+        """,
     )
