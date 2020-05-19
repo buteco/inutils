@@ -86,7 +86,8 @@ def test_timer_basic_usage():
     assert timer.end_time > timer.start_time > 0
     assert round2(timer.total_time) <= 0.02
     assert timer.end_time - timer.start_time == timer.total_time
-    assert timer.total == timer.total_in_ms == "10ms"
+    assert timer.total.endswith("ms")
+    assert timer.total == timer.total_in_ms
     assert timer.total_in_mins == "0m00s"
     assert_equal_reports(
         timer.report,
