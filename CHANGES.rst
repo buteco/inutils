@@ -2,6 +2,12 @@
 Changes
 =======
 
+0.1.3 / 2020-05-20
+==================
+
+* Fix timer to display time in hours (1h10m10s instead of 70m10s)
+
+
 0.1.2 / 2020-05-19
 ==================
 
@@ -10,11 +16,13 @@ Changes
 * Fix timer so it will keep report aligned when the time exceeds 10 minutes
   (worked ok with 0m20s but not with 10m10s because the latter has greater length)
 
+
 0.1.1 / 2020-05-19
 ==================
 
 * Fix chunkify to work correctly with generators
 * Small fix on timer tests
+
 
 0.1.0 / 2020-05-19
 ==================

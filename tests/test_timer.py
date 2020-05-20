@@ -1,9 +1,11 @@
 import functools
+import io
 import re
 import time
+from contextlib import redirect_stdout
 from unittest import mock
 
-from inutils.timer import Timer, format_mins, format_ms, format_time
+from inutils.timer import Timer, format_hours, format_mins, format_ms, format_time
 
 round2 = functools.partial(round, ndigits=2)
 
@@ -18,11 +20,11 @@ def assert_equal_reports(report, str_report):
 
 def test_format_time():
     assert format_time(0.01) == "10ms"
+    assert format_time(0.01, disable_ms=True) == "0m00s"
     assert format_time(0.1) == "100ms"
     assert format_time(1) == "0m01s"
     assert format_time(10) == "0m10s"
-    assert format_time(10, force_ms=True) == "10000ms"
-    assert format_time(3620) == "60m20s"
+    assert format_time(3620) == "1h00m20s"
 
 
 def test_format_ms():
@@ -42,13 +44,22 @@ def test_format_mins():
     assert format_mins(59.9) == "1m00s"
 
 
+def test_format_hours():
+    hour = 3600
+    assert format_hours(hour - 0.2) == "1h00m00s"
+    assert format_hours(hour + 1) == "1h00m01s"
+    assert format_hours(hour + 137) == "1h02m17s"
+    assert format_hours(2 * hour) == "2h00m00s"
+    assert format_hours(100 * hour) == "100h00m00s"
+
+
 def test_timer():
     timer = Timer("name")
 
     assert repr(timer) == "<Timer(label='name', parent=None)>"
     assert timer.label == "name"
     assert timer.verbose is True
-    assert timer.force_ms is False
+    assert timer.disable_ms is False
     assert timer.parent is None
     assert timer.level == 0
     assert timer.start_time == -1
@@ -82,7 +93,9 @@ def test_timer_as_decorator_with_explicit_label():
 
 
 def test_timer_basic_usage():
-    with Timer("label") as timer:
+    f = io.StringIO()
+
+    with redirect_stdout(f), Timer("label") as timer:
         time.sleep(0.01)
 
     assert timer.end_time > timer.start_time > 0
@@ -91,11 +104,12 @@ def test_timer_basic_usage():
     assert timer.total.endswith("ms")
     assert timer.total == timer.total_in_ms
     assert timer.total_in_mins == "0m00s"
+    assert f.getvalue() == timer.report
     assert_equal_reports(
         timer.report,
         """
-        [0m00s]    label start
-        [0m00s]    label end (10ms)
+        [0m00s]     label start
+        [0m00s]     label end (10ms)
     """,
     )
 
@@ -124,8 +138,8 @@ def test_timer_child_one_level():
     assert_equal_reports(
         child.report,
         """
-        [0m00s]       ↳  child start
-        [0m00s]       ↳  child end (10ms)
+        [0m00s]        ↳  child start
+        [0m00s]        ↳  child end (10ms)
     """,
     )
 
@@ -133,10 +147,10 @@ def test_timer_child_one_level():
     assert_equal_reports(
         timer.report,
         """
-        [0m00s]    parent start
-        [0m00s]       ↳  child start
-        [0m00s]       ↳  child end (10ms)
-        [0m00s]    parent end (40ms)
+        [0m00s]     parent start
+        [0m00s]        ↳  child start
+        [0m00s]        ↳  child end (10ms)
+        [0m00s]     parent end (40ms)
     """,
     )
 
@@ -157,8 +171,8 @@ def test_timer_two_childs():
     assert_equal_reports(
         child1.report,
         """
-        [0m00s]       ↳  child1 start
-        [0m00s]       ↳  child1 end (200ms)
+        [0m00s]        ↳  child1 start
+        [0m00s]        ↳  child1 end (200ms)
     """,
     )
 
@@ -168,8 +182,8 @@ def test_timer_two_childs():
     assert_equal_reports(
         child2.report,
         """
-        [0m00s]       ↳  child2 start
-        [0m00s]       ↳  child2 end (100ms)
+        [0m00s]        ↳  child2 start
+        [0m00s]        ↳  child2 end (100ms)
     """,
     )
 
@@ -177,19 +191,19 @@ def test_timer_two_childs():
     assert_equal_reports(
         timer.report,
         """
-        [0m00s]    parent start
-        [0m00s]       ↳  child1 start
-        [0m00s]       ↳  child1 end (200ms)
-        [0m00s]       ↳  child2 start
-        [0m00s]       ↳  child2 end (100ms)
-        [0m00s]    parent end (400ms)
+        [0m00s]     parent start
+        [0m00s]        ↳  child1 start
+        [0m00s]        ↳  child1 end (200ms)
+        [0m00s]        ↳  child2 start
+        [0m00s]        ↳  child2 end (100ms)
+        [0m00s]     parent end (400ms)
     """,
     )
 
 
 @mock.patch("inutils.timer.time.perf_counter")
 def test_report_total_time_more_than_six_chars(counter_mock):
-    counter_mock.side_effect = [0, 0, 612, 612]
+    counter_mock.side_effect = [0, 0, 36012, 36012]
 
     with Timer("foo") as timer:
         pass
@@ -197,7 +211,7 @@ def test_report_total_time_more_than_six_chars(counter_mock):
     assert_equal_reports(
         timer.report,
         """
-        [0m00s]    foo start
-        [10m12s]   foo end (10m12s)
+        [0m00s]     foo start
+        [10h00m12s] foo end (10h00m12s)
         """,
     )

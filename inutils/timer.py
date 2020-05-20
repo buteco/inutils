@@ -3,10 +3,10 @@ from functools import wraps
 
 
 class Timer:
-    def __init__(self, label="", verbose=True, force_ms=False, parent=None):
+    def __init__(self, label="", verbose=True, disable_ms=False, parent=None):
         self.verbose = verbose
         self.label = label
-        self.force_ms = force_ms
+        self.disable_ms = disable_ms
         self.parent = parent
         self.level = 0
         self.start_time = -1
@@ -25,7 +25,7 @@ class Timer:
 
     @property
     def total(self):
-        return format_time(self.total_time, force_ms=self.force_ms)
+        return format_time(self.total_time, disable_ms=self.disable_ms)
 
     @property
     def total_in_ms(self):
@@ -37,17 +37,14 @@ class Timer:
 
     def __enter__(self):
         self.start_time = time.perf_counter()
-
-        if self.verbose:
-            self.print("{} start".format(self.label))
+        self.print("{} start".format(self.label))
 
         return self
 
     def __exit__(self, *exc):
         self.end_time = time.perf_counter()
         self.total_time = self.end_time - self.start_time
-        if self.verbose:
-            self.print("{} end ({})".format(self.label, self.total))
+        self.print("{} end ({})".format(self.label, self.total))
 
     def __call__(self, func):
         if not self.label:
@@ -65,34 +62,35 @@ class Timer:
         return "<{}(label={!r}, parent={!r})>".format(type(self).__name__, self.label, parent)
 
     def print(self, *args):
-        now = format_mins(time.perf_counter() - self.root.start_time)
+        now = format_time(time.perf_counter() - self.root.start_time, disable_ms=True)
         prefix = "[{}]".format(now)
-        prefix = "{:<10}".format(prefix)
-        indent = "     " * self.level
+        prefix = "{:<11}".format(prefix)
 
-        if not indent:
-            vals = (prefix, *args)
-        else:
-            indent = indent[:-2] + "↳ "
-            vals = (prefix, indent, *args)
+        if self.level >= 1:
+            prefix += "      " * self.level
+            prefix = prefix[:-2] + "↳ "
 
-        output = " ".join(vals)
+        vals = (prefix, *args)
+        output = " ".join(vals) + "\n"
+
         # FIXME: make this to work properly with parent/child
-        self.report += output + "\n"
+        self.report += output
         if self.root is not self:
-            self.root.report += output + "\n"
+            self.root.report += output
 
         if self.verbose:
-            print(output)
+            print(output, end="")
 
     def child(self, *args, **kwargs):
         return Timer(*args, parent=self, **kwargs)
 
 
-def format_time(seconds, force_ms=False):
-    if seconds < 1 or force_ms:
+def format_time(seconds, *, disable_ms=False):
+    if seconds < 1 and not disable_ms:
         return format_ms(seconds)
-    return format_mins(seconds)
+    if seconds < 3600:
+        return format_mins(seconds)
+    return format_hours(seconds)
 
 
 def format_ms(seconds):
@@ -101,4 +99,10 @@ def format_ms(seconds):
 
 def format_mins(seconds):
     mins, secs = divmod(round(seconds), 60)
-    return "{}m{:02.0f}s".format(mins, secs)
+    return "{}m{:02}s".format(mins, secs)
+
+
+def format_hours(seconds):
+    mins, secs = divmod(round(seconds), 60)
+    hours, mins = divmod(mins, 60)
+    return "{}h{:02}m{:02}s".format(hours, mins, secs)
